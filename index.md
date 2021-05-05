@@ -1,10 +1,8 @@
 ## An Introduction of NeuralCoref and Coreference
 
-Coreference resolustion is to find all the expressions that refer to the same person or thing in a text. It is an important part in Natural Language Processing to help interprete the text correctly and estimate the relative importance of different subjects and pronouns.
+Coreference resolusion is to find all the expressions that refer to the same person or thing in a text. It is an important part in Natural Language Processing for semantic understanding that recognizes the corresponded entities among sentences and estimate the relative importance of different subjects and pronouns. The algorithm of coreference resolution for different languages could differ based upon the grammars and application circumstances.
 
-NeuralCoref is a pipeline extension for spaCy 2.1+ which annotates and resolves coreference clusters using a neural network. NeuralCoref is production-ready, integrated in spaCy's NLP pipeline and extensible to new training datasets.
-
-For a brief introduction to coreference resolution and NeuralCoref, please refer to our blog post. NeuralCoref is written in Python/Cython and comes with a pre-trained statistical model for English only.
+NeuralCoref is a pipeline extension for spaCy 2.1+. It is explicitly developed to annotate and resolve coreference clusters. NeuralCoref is production-ready, integrated in spaCy's NLP pipeline and extensible to new training datasets and languages. For a brief introduction to coreference resolution and NeuralCoref, please refer to [huggingface blog post](https://github.com/huggingface/neuralcoref). NeuralCoref is written in Python/Cython and comes with a pre-trained statistical model for English only and here we introduce its application for Chinese NLP. NerualCoref is a python-based library for coreference resolution, the other commonly used library (applicable to Chinese) is a JAVA based [Standford CoreNLP](https://stanfordnlp.github.io/CoreNLP/). 
 
 ## Training Environment Configuration
 
