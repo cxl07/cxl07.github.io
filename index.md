@@ -105,6 +105,12 @@ Then we can train the model using the following commands:
 python -m neuralcoref.train.learn --train ./data/train/ --eval ./data/dev/
 ```
 
+The neural network has 5 layers:
+
+```python
+ReLu >> ReLu >> ReLu >> Affine >> Affine
+```
+
 The weights and bias of each training epoch are stroed in [the checkpoints folder](https://github.com/huggingface/neuralcoref/tree/master/neuralcoref/train/checkpoints), `learn.py` also periodcally stores best weights and bias settings so far into the folder. This feauture also allows us to start the training from a specific checkpoint, which is very useful.
 
 ```bash
@@ -125,44 +131,72 @@ from neuralcoref.train.utils import SIZE_EMBEDDING
 from neuralcoref.train.evaluator import ConllEvaluator
 ```
 
-## Integrate Trained Model with NeuralCoref Library
+## Integrate Trained Model with NeuralCoref
+
+Once you are satisfied with the results of the training, you can try to integrate the trained neural network with NeuralCoref. Based on [NeuralCoref's README](https://github.com/huggingface/neuralcoref#internals-and-model), the first time you import NeuralCoref in python, it will download the weights of the neural network model in a cache folder. It means NeuralCoref uses default parameters to set up its model. How do we configure the model with our trained weights and bias? There is no relavent documents so far, so in this section I would like to talk about how I integrated my trained model into NeuralCoref module.
+
+The most important thing is to load trained weights and bias into NeuralCoref's model, we can implement it by loading the best checkpoint file:
+
+```python
+import torch
+
+with Model.define_operators({'**': clone, '>>': chain}):
+            single_model = ReLu(h1, SIZE_SINGLE_IN) >> ReLu(h2, h1) >> ReLu(h3, h2) >> Affine(1, h3) >> Affine(1, 1)
+            pairs_model = ReLu(h1, SIZE_PAIR_IN) >> ReLu(h2, h1) >> ReLu(h3, h2) >> Affine(1, h3) >> Affine(1, 1)
+            
+        tm = torch.load("best_modelallpairs")
+
+        pairs_model._layers[0].W = tm["pair_top.0.weight"].cpu().numpy()
+        pairs_model._layers[0].b = tm["pair_top.0.bias"].cpu().numpy()
+        ...
+
+        single_model._layers[0].W = tm["single_top.0.weight"].cpu().numpy()
+        single_model._layers[0].b = tm["single_top.0.bias"].cpu().numpy()
+        ...
+```
+
+[This thread](https://github.com/huggingface/neuralcoref/issues/257) has a very good discussion about this topic.
+
+You can either put the code example to [`nerucoref.pyx`](https://github.com/huggingface/neuralcoref/blob/master/neuralcoref/neuralcoref.pyx#L497) directly or use it separately and replace NeuralCoref's model later.
+
+Since we use Chinese word vectors to train the model and NeuralCoref loads the English word vectors from the cache folder by default, we need to take a look at the word vector. We can modify `nerucoref.pyx` to load the Chinese word vectors.
+
+```python
+self.static_vectors = numpy.load("static_word_embeddings.npy")
+```
+
+Then you need to modify [`get_word_embedding`](https://github.com/huggingface/neuralcoref/blob/master/neuralcoref/neuralcoref.pyx#L878) as well to make it use the Chinese word vectors.
+
+A better alternative is to pack the Chinese word vector as a spaCy model and store it into the cache folder so that NeuralCoref can fetch and load it directly.
+
+```bash
+gzip word2vec.txt
+python -m spacy init-model zh ./data/spacy.word2vec.model --vectors-loc word2vec.txt.gz
+```
+
+```python
+# load model
+nlp = spacy.load(model)
+# store it into cache folder
+nlp.vocab.vectors.to_disk(path)
+```
 
 ## Examples of Using NeuralCoref with Trained Model
 
-## Welcome to GitHub Pages
+With the trained model integrated with NeuralCoref, we can strat using it!
 
-You can use the [editor on GitHub](https://github.com/cxl07/cxl07.github.io/edit/main/README.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+```python
+import spacy
+nlp = spacy.load("zh_model")
+import neuralcoref
+neuralcoref.add_to_pipe(nlp)
+doc = nlp('大家爱我。他们对我好。')
+doc._.has_coref
+doc._.coref_clusters
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+Since the hardware limitation of my laptop, I only trained the model with a few samples and the result of my Chinese NeuralCoref is not very good. I hope you can train your more powerful CPU/GPU with more data and the result will be excellent!
 
-### Jekyll Themes
+## Discussion and Questions
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/cxl07/cxl07.github.io/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+If you have any question with this tutorial, please feel free to post it to the [GitHub issues page](https://github.com/cxl07/cxl07.github.io/issues) and we can talk there!
