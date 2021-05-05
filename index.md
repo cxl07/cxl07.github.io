@@ -1,5 +1,7 @@
 ## An Introduction of NeuralCoref and Coreference
 
+Coreference resolustion is to find all the expressions that refer to the same person or thing in a text. It is an important part in Natural Language Processing to help interprete the text correctly and estimate the relative importance of different subjects and pronouns.
+
 NeuralCoref is a pipeline extension for spaCy 2.1+ which annotates and resolves coreference clusters using a neural network. NeuralCoref is production-ready, integrated in spaCy's NLP pipeline and extensible to new training datasets.
 
 For a brief introduction to coreference resolution and NeuralCoref, please refer to our blog post. NeuralCoref is written in Python/Cython and comes with a pre-trained statistical model for English only.
@@ -82,7 +84,7 @@ SIZE_FP = 70  # number of features for a pair of mention
 ...
 ```
 
-NeuralCoref's default Engish word vector's dimension is 50. If I use fastText's word vectors, in which case the Chinese word vector's dimension becomes 300, the size configuration will be:
+NeuralCoref's default Engish word vector's dimension is 50. If I use fastText's word vectors and the Chinese word vector's dimension becomes 300, the size configuration will be:
 
 ```python
 SIZE_SPAN = 1500  # size of the span vector (averaged word embeddings)
@@ -179,6 +181,17 @@ python -m spacy init-model zh ./data/spacy.word2vec.model --vectors-loc word2vec
 nlp = spacy.load(model)
 # store it into cache folder
 nlp.vocab.vectors.to_disk(path)
+```
+
+And you need to change the size of NeuralCoref's model as well, below is what I have for fastText's word vector.
+
+```python
+DEF SIZE_WORD = 8 # number of words in a mention (tuned embeddings)
+DEF SIZE_EMBEDDING = 300 # size of the words embeddings
+DEF SIZE_SPAN = 5 * SIZE_EMBEDDING # size of the span vector (averaged word embeddings)
+DEF SIZE_PAIR_FEATS = 69 # number of features for a pair of mention
+DEF SIZE_FP_COMPRESSED = 9 # size of the features for a pair of mentions as stored in numpy arrays
+DEF SIZE_SNGL_FEATS = 23 # number of features of a single mention
 ```
 
 ## Examples of Using NeuralCoref with Trained Model
